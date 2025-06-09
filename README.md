@@ -3,7 +3,7 @@
 
 ## 🛠️ Rule inventory analysis
 - **What it does**: Automatically classifies thousands of IDS rules into category types.
-- **Why it matters**: Helps security teams understand quickly th rulesettructure and focus of their ruleset without manually inspecting each rule.
+- **Why it matters**: Helps security teams understand quickly the ruleset structure and focus of their ruleset without manually inspecting each rule.
 - **Usecase**: Ideal for validating signature coverage, identifying rule gaps, or auditing open-source rule collections.
 
 For example, it can analyze rule like:
