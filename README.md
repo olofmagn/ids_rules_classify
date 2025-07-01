@@ -1,7 +1,7 @@
 # IDS Rule Inventory Classifier
 - This Python tool analyzes and classifies Suricata rules by detecting key signature types such as hex patterns, string matches, PCREs, and file hashes. It assigns a weighted score to each rule based on its indicators, helping developers evaluate rule strength, specificity, and detection coverage.
 
-## 🛠️ Rule inventory analysis
+## Rule inventory analysis
 - **What it does**: Automatically classifies thousands of IDS rules into category types.
 - **Why it matters**: Helps security teams understand quickly the ruleset structure and focus of their ruleset without manually inspecting each rule.
 - **Usecase**: Ideal for validating signature coverage, identifying rule gaps, or auditing open-source rule collections.
@@ -12,7 +12,7 @@ alert tcp any any -> any any (msg:"ET SHELLCODE Koeln Shellcode"; flow:establish
 alert udp any any -> any any (msg:"ET SHELLCODE Koeln Shellcode (UDP)"; content:"|eb 0f 8b 34 24 33 c9 80 c1|"; content:"|80 36|"; distance:0; content:"|46 e2 fa c3 e8 ec|"; distance:0; classtype:shellcode-detect; sid:2009278; rev:2;)
 ```
 
-## ✅ Supported Categories
+## Supported Categories
 
 | Category                 | Description                                        |
 |--------------------------|----------------------------------------------------|
@@ -22,7 +22,7 @@ alert udp any any -> any any (msg:"ET SHELLCODE Koeln Shellcode (UDP)"; content:
 | String                   | Readable string matchies                           |
 | Unknown                  | No recognized indicators                           |
 
-## 🧠 How It Works
+## How It Works
 Each rule is evaluated through a hierarchical and logical sequence based on well-defined characteristics:
 
 ```python
@@ -85,7 +85,7 @@ By evaluating the checks based on these semantics, it reflects:
 - Suricata’s matching pipeline (e.g., fast pattern matching followed by deeper content or PCRE evaluation).
 - The likely detection outcome of a rule — for example, a rule that relies heavily on hex content suggests the detection is based on specific binary patterns observed in malicious traffic.
 
-## 🔢 Scoring system
+## Scoring system
 | **Indicator**       | **Score** | **Rationale**                                                                     |
 | ------------------------ | --------- | --------------------------------------------------------------------------------- |
 | **PCRE**                 | 100       | Very specific, rare, and computationally expensive but highly accurate            |
@@ -94,24 +94,27 @@ By evaluating the checks based on these semantics, it reflects:
 | **String**               | 70        | Matches common strings; useful but can be prone to false positives                |
 | **Unknown**              | 0         | No identifiable signature type detected                                           |
 
-## 📂 File structure
-- classify.py          
-- emerging-all.rules.txt
-- requirements.txt
-- README.md
-- pictures
+## File structure
+```
+.
+├── classify.py               # Main script for rule classification
+├── emerging-all.rules.txt    # Input file with Suricata rules
+├── requirements.txt          # Python dependencies
+├── README.md                 # Project documentation (this file)
+└── pictures/                 # Screenshots and diagrams
+```
 
-## ✅ Requirements
+## Requirements
 - Python 3.7+
 - Dependencies specified in `requirements.txt`
 
-## 📌 Notes
+## Notes
 - It is under continous development as more features and refinements are about to be added.
 
-## 📦 Usage
+## Usage
 1. Clone the repository on your local machine:
 ```
-git clone https://github.com/olofmagn/classify
+git clone https://github.com/olofmagn/classify_ids_rules
 ```
 
 2. Install requirements:
@@ -171,5 +174,5 @@ PCRE: 503
 <img src="pictures/dns.png" alt="dns data" width="400"/>
 <img src="pictures/overall.png" alt="overall data" width="400"/>
 
-## 📝 License
+## License
 This project is open-source and licensed under the MIT License. See the LICENSE file for details.
