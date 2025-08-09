@@ -14,6 +14,7 @@ Author: Olof Magnusson
 Date: 2025-06-03
 A program that simplifies the understanding of the different rules from open-source data-sets using suricata/snort ids.
 """
+
 BANNER = r"""
    _____ _               _  __
   / ____| |             (_)/ _|
@@ -24,14 +25,21 @@ BANNER = r"""
                                 __/ |
                                |___/
 """
+
 class LoggerManager:
     """
-    Intitalize the logging instance
-
-    Returns: 
-    - The logger associated with this module
+    Logger manager
     """
-    def __init__(self, name:str =__name__, level: int = logging.INFO):
+
+    def __init__(self, name: str = __name__, level: int = logging.INFO) -> None:
+        """
+        Initialize logger manager with specified name and logging level
+
+        Args:
+        - name (str): name of the logger
+        - level (int): logging level
+        """
+
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
 
@@ -42,21 +50,27 @@ class LoggerManager:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
-    def get_logger(self):
+    def get_logger(self) -> logging.Logger:
+        """
+        Return configured logger instance
+        """
+
         return self.logger
 
 class SuricataRuleVisualizer:
-    def __init__(self, input_file, output_file: Optional[TextIO]=None) -> int:
+    """
+    Visualizes and analyzes Suricata rule patterns and classifications
+    """
+
+    def __init__(self, input_file: str, output_file: Optional[str] = None) -> None:
         """
         Initalize input_file and output_file for rule loading and writing
         
         Args:
         - input_file (str): Path to the input Suricata rule file
-        - output_file (str) : Path to the output file
-
-        Returns:
-        - Initalized logger, files and compiled regex patterns
+        - output_file (Optional[str]) : Path to the output file
         """
+
         self.logger = LoggerManager(self.__class__.__name__).get_logger()
         self.input_file = input_file
         self.output_file = output_file
@@ -69,10 +83,12 @@ class SuricataRuleVisualizer:
 
     def _load_ruleset(self) -> List[str]:
         """
-        Loads and filters rules from a file.
+        Loads a file and read all possible lines
 
-        Returns: (List[str]) of rule string (e.g., lines starting with 'alert')
+        Returns:
+        - (List[str]): A list of lines to process
         """
+
         try:
             with open(self.input_file, 'r', encoding='utf-8') as file:
                 lines = file.readlines()
@@ -81,35 +97,37 @@ class SuricataRuleVisualizer:
             self.logger.error(f"File not found: {self.input_file}. Check if you provided correct filepath")
             sys.exit(1)
         except IOError:
-            self.logger.error(f"I/O Error occured when reading {self.file_path}. Exiting")
+            self.logger.error(f"I/O Error occured when reading {self.input_file}. Exiting")
             sys.exit(1)
 
-    def _parse_rule(self, rule:str) -> Tuple[str, Any]:
+    def _parse_rule(self, rule: str) -> Optional[Tuple[str, str, str]]:
         """
-        Parse protocol and alert type from a rule. We only focus on parsing IDS rules.
+        Parse protocol and alert type from a rule
         
         Args:
-        - rule (str): Rule logic type.
+        - rule (str): Rule logic type
 
         Returns:
-        - (Tuple[str]): a tuple of strings.
+        - Optional[Tuple[str, str, str]]: Tuple of (protocol, alert_type, rule)
         """
+
         match = re.match(self.match_pattern, rule)
         if match:
             alert_type, protocol = match.groups()
             return protocol, alert_type, rule
         return None
 
-    def _classify_rule_logic(self, rule:str) -> dict:
+    def _classify_rule_logic(self, rule: str) -> Dict[str, Any]:
         """
-        Classify rule logic type. 
+        Classify rule logic type
 
         Args: 
-        - rule (str): Rule logic type.
+        - rule (str): Rule logic type
 
         Returns:
-        - primary (dict[str]): The primary alert definition based on the weighted score.
+        - (Dict[str, Any]): The primary alert definition based on the weighted score
         """
+
         # Priority levels for scoring
         PRIORITY = {
             "PCRE": 100,
@@ -167,7 +185,17 @@ class SuricataRuleVisualizer:
                 "counts":dict(match_counts)
                 }
 
-    def group_and_classify_rules(self, rules:list[str]) -> dict:
+    def group_and_classify_rules(self, rules: List[str]) -> Dict[str, Any]:
+        """
+        Group and classify rules based on the pattern
+
+        Args:
+        - rules (List[str]): A list of rule strings to process
+
+        Returns:
+        - Dict[str, Any]: Grouped rule data by protocol, alert type, and logic type
+        """
+
         grouped_data = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
         for idx, rule in enumerate(rules):
@@ -181,18 +209,16 @@ class SuricataRuleVisualizer:
 
         return grouped_data
         
-    def save_or_print_grouped_data(self, grouped_data:Dict[str, Any], output_file:Optional[TextIO]=None) -> int:
+    def save_or_print_grouped_data(self, grouped_data: Dict[str, Any], output_file: Optional[str] = None) -> None:
         """
-        Save grouped data to a text file in a structured format.
-        If no file provided, the result will be printed to the console.
+        Save grouped data to a text file in a structured format
+        If no file provided, the result will be printed to the console
 
         Args:
-        - grouped_data (dict[str]): protocol, alert and rule type.
-        - output_file (file): output file.
-
-        Returns:
-        - Status code (0 = success)
+        - grouped_data (Dict[str, Any]): Protocol, alert and rule type data
+        - output_file (Optional[str]): Path to the output file
         """
+
         f = open(output_file, 'w') if output_file else None
         try:
             for protocol, alert_dict in grouped_data.items():
@@ -217,16 +243,14 @@ class SuricataRuleVisualizer:
                 f.close()
                 self.logger.info(f"Grouped data saved to {output_file}")
 
-    def visualize_data(self, grouped_data:Dict[str, Any]) -> plt:
+    def visualize_data(self, grouped_data: Dict[str, Any]) -> None: 
         """
-        Visualize data using stacked bar chart and heatmap.
+        Visualize data using stacked bar chart and heatmap
 
         Args:
-        - grouped_data (dict[str]): protocol, alert and rule type.
-
-        Returns:
-        - plt: A dataframe with the current plot.
+        - grouped_data (Dict[str, Any]): protocol, alert and rule type
         """
+
         protocols = []
         alert_types = []
         logic_types = []
@@ -287,7 +311,12 @@ class ArgumentParser:
     """
     Handles argument parsing
     """
-    def __init__(self):
+
+    def __init__(self) -> None:
+        """
+        Initialize argument parser
+        """
+
         self.parser = self.create_parser()
 
     def create_parser(self) -> argparse.ArgumentParser:
@@ -296,6 +325,7 @@ class ArgumentParser:
 
         Returns: An instance of argparse.ArgumentParser
         """
+
         parser = argparse.ArgumentParser(
                 description="Suricata Rule Classifier",
                 formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -317,25 +347,35 @@ class ArgumentParser:
 
         Returns: a namespace object
         """
+
         return self.parser.parse_args()
 
 class SuricataRuleClassifier:
-    def __init__(self):
+    """
+    Classifies rules in IDS rule files depending on a given pattern
+    """
+
+    def __init__(self) -> None:
         """ 
-        Initialize the application, including argument parsing and searcher.
+        Initialize the application, including argument parsing and searcher
         """
+
         parser = ArgumentParser()
 
         self.args = parser.parse_args()
         self.visualizer = SuricataRuleVisualizer(input_file = self.args.input_file,
                                                   output_file = self.args.output_file)
-    def run(self):
+    def run(self) -> None:
+        """
+        Loads rulesets and save/visualize the result
+        """
+
         rules = self.visualizer._load_ruleset()
         results = self.visualizer.group_and_classify_rules(rules)
         self.visualizer.save_or_print_grouped_data(results, self.args.output_file)
         self.visualizer.visualize_data(results)
 
-def main():
+def main() -> None:
     try:
         app = SuricataRuleClassifier()
         app.run()
