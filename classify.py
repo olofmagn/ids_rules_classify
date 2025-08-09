@@ -26,6 +26,7 @@ BANNER = r"""
                                |___/
 """
 
+
 class LoggerManager:
     """
     Logger manager
@@ -46,7 +47,7 @@ class LoggerManager:
         # Avoid duplicate handlers if logger already has one
         if not self.logger.hasHandlers():
             handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
@@ -57,6 +58,7 @@ class LoggerManager:
 
         return self.logger
 
+
 class SuricataRuleVisualizer:
     """
     Visualizes and analyzes Suricata rule patterns and classifications
@@ -65,7 +67,7 @@ class SuricataRuleVisualizer:
     def __init__(self, input_file: str, output_file: Optional[str] = None) -> None:
         """
         Initalize input_file and output_file for rule loading and writing
-        
+
         Args:
         - input_file (str): Path to the input Suricata rule file
         - output_file (Optional[str]) : Path to the output file
@@ -74,11 +76,15 @@ class SuricataRuleVisualizer:
         self.logger = LoggerManager(self.__class__.__name__).get_logger()
         self.input_file = input_file
         self.output_file = output_file
-        self.hash_pattern = re.compile(r'[a-fA-F0-9]{32,128}', re.IGNORECASE)
-        self.hex_pattern =  re.compile(r'\|(?:[0-9a-fA-F]{2}\s*)+\|', re.IGNORECASE)
+        self.hash_pattern = re.compile(r"[a-fA-F0-9]{32,128}", re.IGNORECASE)
+        self.hex_pattern = re.compile(r"\|(?:[0-9a-fA-F]{2}\s*)+\|", re.IGNORECASE)
         self.pcre_values = re.compile(r'pcre\s*:\s*"([^"]+)"', re.IGNORECASE)
-        self.content_pattern = re.compile(r'^(?!\|)(?![a-fA-F0-9]{32,128}$).{4,}$', re.IGNORECASE)
-        self.match_pattern = re.compile(r'^\s*(alert)\s+(tcp|udp|icmp|dns|tls)', re.IGNORECASE) # only IDS alerts
+        self.content_pattern = re.compile(
+            r"^(?!\|)(?![a-fA-F0-9]{32,128}$).{4,}$", re.IGNORECASE
+        )
+        self.match_pattern = re.compile(
+            r"^\s*(alert)\s+(tcp|udp|icmp|dns|tls)", re.IGNORECASE
+        )  # only IDS alerts
         self.content_values = re.compile(r'content:\s*"([^"]+)"', re.IGNORECASE)
 
     def _load_ruleset(self) -> List[str]:
@@ -90,20 +96,24 @@ class SuricataRuleVisualizer:
         """
 
         try:
-            with open(self.input_file, 'r', encoding='utf-8') as file:
+            with open(self.input_file, "r", encoding="utf-8") as file:
                 lines = file.readlines()
             return lines
         except FileNotFoundError:
-            self.logger.error(f"File not found: {self.input_file}. Check if you provided correct filepath")
+            self.logger.error(
+                f"File not found: {self.input_file}. Check if you provided correct filepath"
+            )
             sys.exit(1)
         except IOError:
-            self.logger.error(f"I/O Error occured when reading {self.input_file}. Exiting")
+            self.logger.error(
+                f"I/O Error occured when reading {self.input_file}. Exiting"
+            )
             sys.exit(1)
 
     def _parse_rule(self, rule: str) -> Optional[Tuple[str, str, str]]:
         """
         Parse protocol and alert type from a rule
-        
+
         Args:
         - rule (str): Rule logic type
 
@@ -121,7 +131,7 @@ class SuricataRuleVisualizer:
         """
         Classify rule logic type
 
-        Args: 
+        Args:
         - rule (str): Rule logic type
 
         Returns:
@@ -129,16 +139,10 @@ class SuricataRuleVisualizer:
         """
 
         # Priority levels for scoring
-        PRIORITY = {
-            "PCRE": 100,
-            "Hash": 90,
-            "Hex": 80,
-            "String": 70,
-            "Unknown": 0
-        }
+        PRIORITY = {"PCRE": 100, "Hash": 90, "Hex": 80, "String": 70, "Unknown": 0}
 
         content_values = re.findall(self.content_values, rule)
-        pcre_values = re.findall(self.pcre_values,rule)
+        pcre_values = re.findall(self.pcre_values, rule)
         matches = []
 
         # Classify content fields
@@ -152,38 +156,35 @@ class SuricataRuleVisualizer:
             if self.hash_pattern.fullmatch(content):
                 matches.append("Hash")
             # Generic strings (e.g., cmd.exe)
-            if self.content_pattern.fullmatch(content) and not content.startswith('|'):
+            if self.content_pattern.fullmatch(content) and not content.startswith("|"):
                 matches.append("String")
 
-        # Classify pcre patterns 
+        # Classify pcre patterns
         for _ in pcre_values:
             matches.append("PCRE")
 
         # invalid strings
         if not matches:
-            return {
-                    "primary":"Unknown",
-                    "total_score":0,
-                    "matched":[]
-                    }
-        
+            return {"primary": "Unknown", "total_score": 0, "matched": []}
+
         match_counts = defaultdict(int)
         for m in matches:
-            match_counts[m]+=1
+            match_counts[m] += 1
 
         # Score system
-        category_scores = { cat: PRIORITY[cat]*count
-        for cat, count in match_counts.items()}
+        category_scores = {
+            cat: PRIORITY[cat] * count for cat, count in match_counts.items()
+        }
 
         primary = max(category_scores, key=category_scores.get)
         total_score = category_scores[primary]
 
         return {
-                "primary": primary,
-                "score": total_score,
-                "matched": matches,
-                "counts":dict(match_counts)
-                }
+            "primary": primary,
+            "score": total_score,
+            "matched": matches,
+            "counts": dict(match_counts),
+        }
 
     def group_and_classify_rules(self, rules: List[str]) -> Dict[str, Any]:
         """
@@ -208,8 +209,10 @@ class SuricataRuleVisualizer:
                 grouped_data[protocol][alert_type][logic_type] += 1
 
         return grouped_data
-        
-    def save_or_print_grouped_data(self, grouped_data: Dict[str, Any], output_file: Optional[str] = None) -> None:
+
+    def save_or_print_grouped_data(
+        self, grouped_data: Dict[str, Any], output_file: Optional[str] = None
+    ) -> None:
         """
         Save grouped data to a text file in a structured format
         If no file provided, the result will be printed to the console
@@ -219,31 +222,39 @@ class SuricataRuleVisualizer:
         - output_file (Optional[str]): Path to the output file
         """
 
-        f = open(output_file, 'w') if output_file else None
+        f = open(output_file, "w") if output_file else None
         try:
             for protocol, alert_dict in grouped_data.items():
                 line = f"Protocol: {protocol.upper()}"
-                if f: f.write(f"{line}\n")
-                else: print(line)
+                if f:
+                    f.write(f"{line}\n")
+                else:
+                    print(line)
 
                 for alert_type, logic_dict in alert_dict.items():
                     line = f"Alert type: {alert_type}"
-                    if f: f.write(f"{line}\n")
-                    else: print(line)
+                    if f:
+                        f.write(f"{line}\n")
+                    else:
+                        print(line)
 
                     for logic_type, count in logic_dict.items():
                         line = f"{logic_type}: {count}"
-                        if f: f.write(f"{line}\n")
-                        else: print(line)
+                        if f:
+                            f.write(f"{line}\n")
+                        else:
+                            print(line)
 
-                if f: f.write('\n')
-                else: print()
+                if f:
+                    f.write("\n")
+                else:
+                    print()
         finally:
             if f:
                 f.close()
                 self.logger.info(f"Grouped data saved to {output_file}")
 
-    def visualize_data(self, grouped_data: Dict[str, Any]) -> None: 
+    def visualize_data(self, grouped_data: Dict[str, Any]) -> None:
         """
         Visualize data using stacked bar chart and heatmap
 
@@ -265,12 +276,14 @@ class SuricataRuleVisualizer:
                     counts.append(count)
 
         # Create DataFrame for visualization
-        data = pd.DataFrame({
-            "Protocol": protocols,
-            "Alert Type": alert_types,
-            "Logic Type": logic_types,
-            "Count": counts
-        })
+        data = pd.DataFrame(
+            {
+                "Protocol": protocols,
+                "Alert Type": alert_types,
+                "Logic Type": logic_types,
+                "Count": counts,
+            }
+        )
 
         # Stacked Bar Chart for each protocol
         for protocol in data["Protocol"].unique():
@@ -280,13 +293,13 @@ class SuricataRuleVisualizer:
                 columns="Logic Type",
                 values="Count",
                 aggfunc="sum",
-                fill_value=0
+                fill_value=0,
             )
             protocol_pivot.plot(
                 kind="bar",
                 stacked=True,
                 figsize=(10, 6),
-                title=f"Logic Type Distribution in {protocol.upper()} Protocol"
+                title=f"Logic Type Distribution in {protocol.upper()} Protocol",
             )
             plt.ylabel("Rule Count")
             plt.tight_layout()
@@ -297,7 +310,7 @@ class SuricataRuleVisualizer:
             columns="Logic Type",
             values="Count",
             aggfunc="sum",
-            fill_value=0
+            fill_value=0,
         )
         plt.figure(figsize=(12, 8))
         sns.heatmap(heatmap_pivot, annot=True, fmt="d", cmap="YlGnBu")
@@ -306,6 +319,7 @@ class SuricataRuleVisualizer:
         plt.xlabel("Logic Type")
         plt.tight_layout()
         plt.show()
+
 
 class ArgumentParser:
     """
@@ -327,18 +341,22 @@ class ArgumentParser:
         """
 
         parser = argparse.ArgumentParser(
-                description="Suricata Rule Classifier",
-                formatter_class=argparse.RawDescriptionHelpFormatter,
-                epilog=BANNER
-                )
+            description="Suricata Rule Classifier",
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog=BANNER,
+        )
 
-        parser.add_argument('-i','--input_file'
-                            , required=True,
-                            help="Path to the input Suricata rule file."
-                            )
-        parser.add_argument('-o', '--output_file',
-                            help="Path to the output file for saving matched rules"
-                            )
+        parser.add_argument(
+            "-i",
+            "--input_file",
+            required=True,
+            help="Path to the input Suricata rule file.",
+        )
+        parser.add_argument(
+            "-o",
+            "--output_file",
+            help="Path to the output file for saving matched rules",
+        )
         return parser
 
     def parse_args(self) -> argparse.Namespace:
@@ -350,21 +368,24 @@ class ArgumentParser:
 
         return self.parser.parse_args()
 
+
 class SuricataRuleClassifier:
     """
     Classifies rules in IDS rule files depending on a given pattern
     """
 
     def __init__(self) -> None:
-        """ 
+        """
         Initialize the application, including argument parsing and searcher
         """
 
         parser = ArgumentParser()
 
         self.args = parser.parse_args()
-        self.visualizer = SuricataRuleVisualizer(input_file = self.args.input_file,
-                                                  output_file = self.args.output_file)
+        self.visualizer = SuricataRuleVisualizer(
+            input_file=self.args.input_file, output_file=self.args.output_file
+        )
+
     def run(self) -> None:
         """
         Loads rulesets and save/visualize the result
@@ -374,6 +395,7 @@ class SuricataRuleClassifier:
         results = self.visualizer.group_and_classify_rules(rules)
         self.visualizer.save_or_print_grouped_data(results, self.args.output_file)
         self.visualizer.visualize_data(results)
+
 
 def main() -> None:
     try:
@@ -385,6 +407,7 @@ def main() -> None:
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
