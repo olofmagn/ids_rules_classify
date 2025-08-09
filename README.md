@@ -26,48 +26,45 @@ alert udp any any -> any any (msg:"ET SHELLCODE Koeln Shellcode (UDP)"; content:
 Each rule is evaluated through a hierarchical and logical sequence based on well-defined characteristics:
 
 ```python
-    PRIORITY = {
-        "PCRE": 100,
-        "Hash": 90,
-        "Hex": 80,
-        "String": 70,
-        "Unknown": 0
-    }
+PRIORITY = {"PCRE": 100, "Hash": 90, "Hex": 80, "String": 70, "Unknown": 0}
 
-    content_values = re.findall(self.content_values, rule)
-    pcre_values = re.findall(self.pcre_values,rule)
-    matches = []
+content_values = re.findall(self.content_values, rule)
+pcre_values = re.findall(self.pcre_values, rule)
+matches = []
 
-    for content in content_values:
-        content = content.strip()
+# Classify content fields
+for content in content_values:
+    content = content.strip()
 
-        if self.hex_pattern.fullmatch(content):
-            matches.append("Hex")
-        if self.hash_pattern.fullmatch(content):
-            matches.append("Hash")
-        if self.content_pattern.fullmatch(content) and not content.startswith('|'):
-            matches.append("String")
+    # Hex content pattern (e.g., |00 01 02|)
+    if self.hex_pattern.fullmatch(content):
+        matches.append("Hex")
+    # File hash detection (e.g., 32 to 128 hex chars)
+    if self.hash_pattern.fullmatch(content):
+        matches.append("Hash")
+    # Generic strings (e.g., cmd.exe)
+    if self.content_pattern.fullmatch(content) and not content.startswith("|"):
+        matches.append("String")
 
-    for _ in pcre_values:
-        matches.append("PCRE")
+# Classify pcre patterns
+for _ in pcre_values:
+    matches.append("PCRE")
 
-    if not matches:
-        return {
-                "primary":"Unknown",
-                "total_score":0,
-                "matched":[]
-                }
+# Handle invalid strings
+if not matches:
+    return {"primary": "Unknown", "total_score": 0, "matched": []}
 
-    match_counts = defaultdict(int)
-    for m in matches:
-        match_counts[m]+=1
+match_counts = defaultdict(int)
+for m in matches:
+    match_counts[m] += 1
 
-    # Score system
-    category_scores = { cat: PRIORITY[cat]*count
-    for cat, count in match_counts.items()}
+# Score system
+category_scores = {
+    cat: PRIORITY[cat] * count for cat, count in match_counts.items()
+}
 
-    primary = max(category_scores, key=category_scores.get)
-    total_score = category_scores[primary]
+primary = max(category_scores, key=category_scores.get)
+total_score = category_scores[primary]
 ```
 
 Example hex pattern match:
