@@ -7,7 +7,7 @@ import argparse
 import sys
 import logging
 
-from typing import List, Optional, TextIO, Tuple, Dict, Any
+from typing import List, Optional, Tuple, Dict, Any
 
 """
 Author: Olof Magnusson
